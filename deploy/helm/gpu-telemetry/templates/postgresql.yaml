@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gpu-telemetry.fullname" . }}-postgresql
+  labels: {{- include "gpu-telemetry.labels" . | nindent 4 }}
+spec:
+  selector: {app.kubernetes.io/component: postgresql, app.kubernetes.io/instance: {{ .Release.Name }}}
+  ports: [{name: postgresql, port: 5432, targetPort: postgresql}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "gpu-telemetry.fullname" . }}-postgresql
+  labels: {{- include "gpu-telemetry.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "gpu-telemetry.fullname" . }}-postgresql
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/component: postgresql, app.kubernetes.io/instance: {{ .Release.Name }}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/component: postgresql, app.kubernetes.io/instance: {{ .Release.Name }}}
+    spec:
+      securityContext: {seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: postgresql
+          image: {{ .Values.postgresql.image | quote }}
+          imagePullPolicy: IfNotPresent
+          ports: [{name: postgresql, containerPort: 5432}]
+          env:
+            - {name: POSTGRES_DB, value: {{ .Values.postgresql.database | quote }}}
+            - {name: POSTGRES_USER, value: {{ .Values.postgresql.username | quote }}}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: {{ default (printf "%s-db" (include "gpu-telemetry.fullname" .)) .Values.postgresql.existingSecret }}, key: password}}
+            - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+          readinessProbe: {exec: {command: [pg_isready, -U, {{ .Values.postgresql.username | quote }}]}, initialDelaySeconds: 3, periodSeconds: 3}
+          livenessProbe: {exec: {command: [pg_isready, -U, {{ .Values.postgresql.username | quote }}]}, initialDelaySeconds: 15, periodSeconds: 10}
+          resources: {{- toYaml .Values.postgresql.resources | nindent 12 }}
+          volumeMounts: [{name: data, mountPath: /var/lib/postgresql/data}]
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: {requests: {storage: {{ .Values.postgresql.storage }}}}

@@ -1,0 +1,34 @@
+{{- if .Values.retention.enabled }}
+{{- $fullname := include "gpu-telemetry.fullname" . -}}
+{{- $dbSecret := default (printf "%s-db" $fullname) .Values.postgresql.existingSecret -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $fullname }}-retention
+  labels: {{- include "gpu-telemetry.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.retention.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels: {app.kubernetes.io/component: retention, app.kubernetes.io/instance: {{ .Release.Name }}}
+        spec:
+          restartPolicy: OnFailure
+          securityContext: {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: retention
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: [/app/retention]
+              env:
+                - {name: DATABASE_URL, valueFrom: {secretKeyRef: {name: {{ $dbSecret }}, key: database-url}}}
+                - {name: RETENTION_MAX_AGE, value: {{ .Values.retention.maxAge | quote }}}
+                - {name: RETENTION_BATCH_SIZE, value: {{ .Values.retention.batchSize | quote }}}
+              resources: {{- toYaml .Values.retention.resources | nindent 16 }}
+              securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+{{- end }}

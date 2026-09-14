@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["image", "queue", "streamer", "collector", "api", "postgresql"],
+  "properties": {
+    "queue": {
+      "type": "object",
+      "properties": {
+        "replicas": {"const": 1, "description": "The exercise broker is durable but intentionally single-node."},
+        "partitions": {"type": "integer", "minimum": 1, "maximum": 1024},
+        "segmentBytes": {"type": "integer", "minimum": 4096},
+        "maxPendingBytes": {"type": "integer", "minimum": 4096},
+        "metricsPort": {"type": "integer", "minimum": 1024, "maximum": 65535}
+      }
+    },
+    "streamer": {
+      "type": "object",
+      "properties": {
+        "replicas": {"type": "integer", "minimum": 1, "maximum": 10},
+        "rowsPerSecond": {"type": "integer", "minimum": 1},
+        "batchSize": {"type": "integer", "minimum": 1},
+        "heartbeatInterval": {"type": "string", "minLength": 2},
+        "datasetID": {"type": "string", "minLength": 1},
+        "metricsPort": {"type": "integer", "minimum": 1024, "maximum": 65535}
+      }
+    },
+    "collector": {"type": "object", "properties": {"replicas": {"type": "integer", "minimum": 1, "maximum": 10}, "batchSize": {"type": "integer", "minimum": 1}, "metricsPort": {"type": "integer", "minimum": 1024, "maximum": 65535}}},
+    "retention": {"type": "object", "properties": {"enabled": {"type": "boolean"}, "schedule": {"type": "string", "minLength": 1}, "maxAge": {"type": "string", "minLength": 2}, "batchSize": {"type": "integer", "minimum": 1}}},
+    "api": {"type": "object", "properties": {"replicas": {"type": "integer", "minimum": 1}, "maxResultRows": {"type": "integer", "minimum": 1}, "maxResultBytes": {"type": "integer", "minimum": 1024}}},
+    "postgresql": {"type": "object", "properties": {"database": {"type": "string", "minLength": 1}, "username": {"type": "string", "minLength": 1}}}
+  }
+}

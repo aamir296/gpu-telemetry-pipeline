@@ -1,0 +1,5 @@
+timestamp,metric_name,gpu_id,device,uuid,modelName,Hostname,container,pod,namespace,value,labels_raw
+"2025-07-18T20:42:34Z","DCGM_FI_DEV_GPU_UTIL","0","nvidia0","GPU-5fd4f087-86f3-7a43-b711-4771313afc50","NVIDIA H100 80GB HBM3","mtv5-dgx1-hgpu-031","","","","42","Hostname=mtv5-dgx1-hgpu-031,device=nvidia0,gpu=0"
+"2025-07-18T20:42:34Z","DCGM_FI_DEV_POWER_USAGE","0","nvidia0","GPU-5fd4f087-86f3-7a43-b711-4771313afc50","NVIDIA H100 80GB HBM3","mtv5-dgx1-hgpu-031","","","","412.5","Hostname=mtv5-dgx1-hgpu-031,device=nvidia0,gpu=0"
+"2025-07-18T20:42:34Z","DCGM_FI_DEV_GPU_UTIL","1","nvidia1","GPU-bc7a12ab-4998-fdc5-0785-2678a929a142","NVIDIA H100 80GB HBM3","mtv5-dgx1-hgpu-031","trainer","pod-a","ml","87","Hostname=mtv5-dgx1-hgpu-031,device=nvidia1,gpu=1"
+"2025-07-18T20:42:34Z","DCGM_FI_DEV_GPU_TEMP","0","nvidia0","GPU-975edf99-5c0a-9db9-3732-0711e20e77e5","NVIDIA H100 80GB HBM3","mtv5-dgx1-hgpu-010","","","","61","Hostname=mtv5-dgx1-hgpu-010,device=nvidia0,gpu=0"

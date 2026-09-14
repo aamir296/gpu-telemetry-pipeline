@@ -1,0 +1,13 @@
+/bin/
+/coverage.out
+/coverage.html
+/dist/
+/.env
+/.idea/
+/.vscode/
+.DS_Store
+*.log
+tmp/
+/input/*
+!/input/real-dcgm.csv
+/.cache/

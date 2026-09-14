@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gpu-telemetry.fullname" . }}-queue
+  labels: {{- include "gpu-telemetry.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector: {app.kubernetes.io/component: queue, app.kubernetes.io/instance: {{ .Release.Name }}}
+  ports:
+    - {name: queue, port: 7000, targetPort: queue}
+    - {name: metrics, port: {{ .Values.queue.metricsPort }}, targetPort: metrics}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "gpu-telemetry.fullname" . }}-queue
+  labels: {{- include "gpu-telemetry.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "gpu-telemetry.fullname" . }}-queue
+  replicas: {{ .Values.queue.replicas }}
+  selector:
+    matchLabels: {app.kubernetes.io/component: queue, app.kubernetes.io/instance: {{ .Release.Name }}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/component: queue, app.kubernetes.io/instance: {{ .Release.Name }}}
+      annotations: {prometheus.io/scrape: "true", prometheus.io/port: {{ .Values.queue.metricsPort | quote }}}
+    spec:
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: queue
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: [/app/queue]
+          ports:
+            - {name: queue, containerPort: 7000}
+            - {name: metrics, containerPort: {{ .Values.queue.metricsPort }}}
+          env:
+            - {name: QUEUE_LISTEN_ADDR, value: ":7000"}
+            - {name: METRICS_LISTEN_ADDR, value: ":{{ .Values.queue.metricsPort }}"}
+            - {name: QUEUE_DATA_DIR, value: /var/lib/gpu-queue}
+            - {name: QUEUE_PARTITIONS, value: {{ .Values.queue.partitions | quote }}}
+            - {name: QUEUE_SEGMENT_BYTES, value: {{ printf "%.0f" .Values.queue.segmentBytes | quote }}}
+            - {name: QUEUE_MAX_PENDING_BYTES, value: {{ printf "%.0f" .Values.queue.maxPendingBytes | quote }}}
+            - {name: STREAM_CYCLE_INTERVAL, value: {{ .Values.streamer.cycleInterval | quote }}}
+          readinessProbe: {httpGet: {path: /readyz, port: metrics}, initialDelaySeconds: 2, periodSeconds: 3}
+          livenessProbe: {httpGet: {path: /healthz, port: metrics}, initialDelaySeconds: 10, periodSeconds: 10}
+          resources: {{- toYaml .Values.queue.resources | nindent 12 }}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: data, mountPath: /var/lib/gpu-queue}]
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: {requests: {storage: {{ .Values.queue.storage }}}}

@@ -1,0 +1,74 @@
+image:
+  repository: gpu-telemetry
+  tag: dev
+  pullPolicy: IfNotPresent
+
+queue:
+  replicas: 1
+  partitions: 8
+  segmentBytes: 8388608
+  maxPendingBytes: 134217728
+  storage: 1Gi
+  metricsPort: 9090
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 500m, memory: 256Mi}
+
+streamer:
+  replicas: 1
+  datasetID: dcgm-sample
+  rowsPerSecond: 100
+  batchSize: 100
+  heartbeatInterval: 5s
+  cycleInterval: 10s
+  csvPath: /data/input.csv
+  metricsPort: 9090
+  # Set an existing PVC claim to mount a larger CSV at /input/input.csv.
+  inputPVC: ""
+  resources:
+    requests: {cpu: 25m, memory: 32Mi}
+    limits: {cpu: 250m, memory: 128Mi}
+
+collector:
+  replicas: 1
+  batchSize: 200
+  metricsPort: 9090
+  resources:
+    requests: {cpu: 25m, memory: 32Mi}
+    limits: {cpu: 500m, memory: 256Mi}
+
+retention:
+  # Disabled by default so every historical observation remains queryable.
+  enabled: false
+  schedule: "0 * * * *"
+  maxAge: 168h
+  batchSize: 10000
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {cpu: 250m, memory: 128Mi}
+
+api:
+  replicas: 1
+  serviceType: ClusterIP
+  port: 8080
+  maxResultRows: 100000
+  maxResultBytes: 16777216
+  resources:
+    requests: {cpu: 25m, memory: 32Mi}
+    limits: {cpu: 500m, memory: 256Mi}
+
+postgresql:
+  image: postgres:17-alpine
+  database: telemetry
+  username: telemetry
+  # Prefer existingSecret in shared environments. When empty, Helm generates and
+  # retains a release-scoped password Secret.
+  existingSecret: ""
+  storage: 1Gi
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile: {type: RuntimeDefault}
